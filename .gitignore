@@ -11,7 +11,6 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 build/
-sdkconfig
 
 .cache/
 
