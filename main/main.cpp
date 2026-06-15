@@ -1,18 +1,39 @@
-#include <chrono>
-#include <thread>
+#include <array>
+#include "hub.hpp"
 
-#include "esp_log.h"
+std::array<std::array<uint8_t, 6>, 4> instrumentMacs = {{
+    {0x24, 0x0A, 0xC4, 0x00, 0x11, 0x22}, // Guitar
+    {0x24, 0x0A, 0xC4, 0x00, 0x33, 0x44}, // Bass
+    {0x24, 0x0A, 0xC4, 0x00, 0x55, 0x66}, // Drums
+    {0x24, 0x0A, 0xC4, 0x00, 0x77, 0x88}  // Auxiliary
+}};
 
-void setup();
-void loop();
+bh::State state = bh::State::Configuring;
 
-extern "C" void app_main() {}
+extern "C" void app_main()
+{
+  while (1)
+  {
+    switch (state)
+    {
+    case bh::State::Configuring:
+    {
+    }
+    break;
 
-void setup() { ESP_LOGV("TEST", "Hello from ESP"); }
+    case bh::State::WorkingBT:
+    {
+      bh::Hub<bh::Connection::BLUETOOTH> hub({}, state);
+      hub.loop();
+    }
+    break;
 
-void loop() {
-  using namespace std::chrono_literals;
-
-  ESP_LOGV("TEST", "HELLO!");
-  std::this_thread.sleep_for(100ms);
+    case bh::State::WorkingUSB:
+    {
+      bh::Hub<bh::Connection::USB> hub({}, state);
+      hub.loop();
+    }
+    break;
+    }
+  }
 }

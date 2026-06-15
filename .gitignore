@@ -12,3 +12,6 @@ _deps
 CMakeUserPresets.json
 build/
 sdkconfig
+
+# Zig
+.zig-cache/
