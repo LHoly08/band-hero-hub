@@ -16,3 +16,4 @@ build/
 
 # Zig
 .zig-cache/
+zls.json
