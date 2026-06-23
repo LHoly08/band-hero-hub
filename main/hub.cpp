@@ -12,10 +12,10 @@ namespace bh
     static const char* TAG = "Hub";
 
     template <>
-    Hub<Connection::USB>::Hub(std::array<std::array<std::uint8_t, 6>, 4> peers, State &state) noexcept : m_peers(peers), state(state) {}
+    Hub<Connection::USB>::Hub(std::array<std::array<std::uint8_t, 6>, 4> peers, std::uint8_t numberPeers, State &state) noexcept : m_peers(peers), state(state), m_numberPeers(numberPeers) {}
 
     template <>
-    Hub<Connection::BLUETOOTH>::Hub(std::array<std::array<std::uint8_t, 6>, 4> peers, State &state) noexcept : m_peers(peers), state(state)
+    Hub<Connection::BLUETOOTH>::Hub(std::array<std::array<std::uint8_t, 6>, 4> peers, std::uint8_t numberPeers, State &state) noexcept : m_peers(peers), state(state), m_numberPeers(numberPeers)
     {
         esp_err_t ret = nvs_flash_init();
         if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
