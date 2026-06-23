@@ -37,6 +37,7 @@ namespace bh
   private:
     Queue<std::uint32_t, 40> m_queue;
     std::array<std::array<std::uint8_t, 6>, 4> m_peers;
+    const std::uint8_t m_numberPeers;
 
     State &state;
   };
