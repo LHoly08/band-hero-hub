@@ -94,6 +94,8 @@ const BluetoothHub = struct {
     pub fn deinit(self: *Self) void {
         self.m_queue.deinit();
     }
+
+    pub fn idk() void {}
 };
 
 const USBHub = struct {
