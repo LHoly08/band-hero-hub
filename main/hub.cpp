@@ -10,6 +10,9 @@
 #include "esp_now.h"
 #include "nvs_flash.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 namespace bh {
 
 static const char *TAG = "Hub";
@@ -130,7 +133,7 @@ template <> void Hub<Connection::BLUETOOTH>::loop() noexcept {
       }
     }
 
-    std::this_thread::sleep_for(std::chrono::microseconds(10));
+    vTaskDelay(pdMS_TO_TICKS(0.01f));
   }
 }
 
@@ -146,7 +149,7 @@ template <> void Hub<Connection::USB>::loop() noexcept {
         std::fflush(stdout);
       }
     }
-    std::this_thread::sleep_for(std::chrono::microseconds(10));
+    vTaskDelay(pdMS_TO_TICKS(0.01f));
   }
 }
 
