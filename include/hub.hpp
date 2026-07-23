@@ -5,9 +5,9 @@
 #include "esp_now.h"
 #include "freertos/FreeRTOS.h"
 #include "queue.hpp"
+#include "utils.hpp"
 #include <array>
 #include <cstdint>
-#include <cstring>
 
 namespace bh {
 
@@ -24,19 +24,19 @@ enum class Connection {
 
 template <Connection T> class Hub {
 public:
-  explicit Hub(std::array<std::array<std::uint8_t, 6>, 4> peers,
-               State &state) noexcept;
+  explicit Hub(const MAC &peers, State &state) noexcept;
   ~Hub() noexcept;
   void loop() noexcept;
 
 private:
   static Hub<T> *instance{nullptr};
+
   static void IRAM_ATTR
   ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
                    const std::uint8_t *data, int data_len) noexcept;
 
   Queue<std::uint32_t, 40> m_queue;
-  std::array<std::array<std::uint8_t, 6>, 4> m_peers;
+  const MAC &m_peers;
 
   State &state;
 };
@@ -47,7 +47,16 @@ void Hub<T>::ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
   std::uint32_t val{};
   std::memcpy(&val, data, data_len);
 
-  instance->m_queue.push<Type::ISR>(val);
+  std::array<std::uint8_t, 6> macAddress{};
+  std::memcpy(macAddress.data(), esp_now_info->macAddress, macAddress.size());
+
+  for (std::uint8_t i{}; i < m_peers.numberOfActives; ++i) {
+    if (macAddress == m_peers.macAddresses[i]) {
+      val |= i;
+      (void)m_queue.push<Type::ISR>(val);
+      break;
+    }
+  }
 }
 
 } // namespace bh

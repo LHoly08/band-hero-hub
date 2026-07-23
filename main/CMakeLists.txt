@@ -10,6 +10,7 @@ idf_component_register(
         esp_netif
         freertos
         bt
+        driver
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_23)

@@ -1,6 +1,5 @@
-#include <cstring>
-
-#include <memory>
+#include <chrono>
+#include <thread>
 
 #include "hub.hpp"
 
@@ -19,6 +18,15 @@ template <>
 Hub<Connection::USB>::Hub(std::array<std::array<std::uint8_t, 6>, 4> peers,
                           State &state) noexcept
     : m_peers(peers), state(state) {
+
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  esp_wifi_init(&cfg);
+  esp_wifi_set_mode(WIFI_MODE_STA);
+  esp_wifi_start();
+
+  esp_now_init();
+  esp_now_register_recv_cb();
+
   instance = this;
 }
 
@@ -26,6 +34,7 @@ template <>
 Hub<Connection::BLUETOOTH>::Hub(
     std::array<std::array<std::uint8_t, 6>, 4> peers, State &state) noexcept
     : m_peers(peers), state(state) {
+
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
       ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -37,6 +46,8 @@ Hub<Connection::BLUETOOTH>::Hub(
     return;
   }
 
+  esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+
   esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
   if (esp_bt_controller_init(&bt_cfg) != ESP_OK) {
     ESP_LOGE(TAG, "Initialize controller failed");
@@ -46,6 +57,8 @@ Hub<Connection::BLUETOOTH>::Hub(
     ESP_LOGE(TAG, "Enable controller failed");
     return;
   }
+
+  esp_ble_gap_set_device_name("BandHero Hub");
 
   esp_bluedroid_config_t cfg = {};
   cfg.ssp_en = true;
@@ -69,13 +82,11 @@ Hub<Connection::BLUETOOTH>::Hub(
              address[1], address[2], address[3], address[4], address[5]);
   }
 
-  esp_netif_init();
-  esp_event_loop_create_default();
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_wifi_init(&cfg);
   esp_wifi_set_mode(WIFI_MODE_STA);
   esp_wifi_start();
-  
+
   esp_now_init();
   esp_now_register_recv_cb();
 
@@ -87,10 +98,14 @@ template <> Hub<Connection::USB>::~Hub() noexcept {
   (void)esp_now_unregister_recv_cb();
   (void)esp_now_deinit();
 
+  (void)esp_wifi_stop();
+  (void)esp_wifi_deinit();
+
   instance = nullptr;
 }
 
 template <> Hub<Connection::BLUETOOTH>::~Hub() noexcept {
+
   (void)esp_bluedroid_disable();
   (void)esp_bluedroid_deinit();
 
@@ -100,6 +115,9 @@ template <> Hub<Connection::BLUETOOTH>::~Hub() noexcept {
   (void)esp_now_unregister_recv_cb();
   (void)esp_now_deinit();
 
+  (void)esp_wifi_stop();
+  (void)esp_wifi_deinit();
+
   instance = nullptr;
 }
 
@@ -108,7 +126,10 @@ template <> void Hub<Connection::BLUETOOTH>::loop() noexcept {
   while (state == State::WorkingBT) {
 
     while (!m_queue.empty()) {
+      if (std::uint32_t val{}; m_queue.pop(val)) {
+      }
     }
+
     std::this_thread::sleep_for(std::chrono::microseconds(10));
   }
 }
@@ -128,4 +149,5 @@ template <> void Hub<Connection::USB>::loop() noexcept {
     std::this_thread::sleep_for(std::chrono::microseconds(10));
   }
 }
+
 } // namespace bh
