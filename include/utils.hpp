@@ -3,13 +3,16 @@
 
 #include <array>
 #include <cstdint>
+#include <inplace_vector>
 
 namespace bh {
 
-struct MAC {
-  std::array<std::array<std::uint8_t, 6>, 4> macAddresses;
-  std::uint8_t numberOfActives;
+enum class State {
+  Configuring = 0,
+  WorkingUSB,
 };
+
+using MAC = std::inplace_vector<std::array<std::uint8_t, 6>, 4>;
 
 } // namespace bh
 

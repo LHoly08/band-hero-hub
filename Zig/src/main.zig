@@ -2,9 +2,11 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("freertos/FreeRTOS.h");
     @cInclude("freertos/queue.h");
+    @cInclude("freertos/task.h");
     @cInclude("esp_now.h");
     @cInclude("esp_log.h");
     @cInclude("nvs_flash.h");
+    @cInclude("stdio.h");
 });
 
 fn Queue(comptime T: type, comptime size: c_ulonglong) type {
@@ -67,35 +69,6 @@ fn Queue(comptime T: type, comptime size: c_ulonglong) type {
 const State = enum {
     Configuring,
     WorkingUSB,
-    WorkingBT,
-};
-
-const BluetoothHub = struct {
-    m_queue: Queue(u32, 40),
-    m_state: *State,
-
-    const Self = @This();
-
-    pub fn init(initState: *State) BluetoothHub {
-        const q = Queue(u32, 40).init() orelse unreachable;
-
-        return BluetoothHub{
-            .m_queue = q,
-            .m_state = initState,
-        };
-    }
-
-    pub fn loop(self: *Self) void {
-        while (self.m_state.* == State.WorkingBT) {
-            while (!self.m_queue.empty()) {}
-        }
-    }
-
-    pub fn deinit(self: *Self) void {
-        self.m_queue.deinit();
-    }
-
-    pub fn idk() void {}
 };
 
 const USBHub = struct {
@@ -114,7 +87,16 @@ const USBHub = struct {
     }
 
     pub fn loop(self: *Self) void {
-        self.m_state.* = .Configuring;
+        while (self.m_state.* == .WorkingUSB) {
+            while (!self.m_queue.empty()) {
+                var val: u32 = undefined;
+                if (self.m_queue.receive(&val)) {
+                    _ = c.fwrite(&val, 1, @sizeOf(@TypeOf(val)), c.stdout);
+                    _ = c.fflush(c.stdout);
+                }
+            }
+            c.vTaskDelay(c.pdMS_TO_TICKS(1));
+        }
     }
 
     pub fn deinit(self: *Self) void {
@@ -127,15 +109,12 @@ export fn app_main() void {
 
     while (true) {
         switch (state) {
-            State.Configuring => {},
+            State.Configuring => {
+                _ = c.fwrite("Hello Zig\n", 1, 10, c.stdout);
+                c.vTaskDelay(1000);
+            },
             State.WorkingUSB => {
                 var hub: USBHub = USBHub.init(&state);
-                defer hub.deinit();
-
-                hub.loop();
-            },
-            State.WorkingBT => {
-                var hub: BluetoothHub = BluetoothHub.init(&state);
                 defer hub.deinit();
 
                 hub.loop();
