@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const idf_build = b.option([]const u8, "idf-build-dir", "Configured ESP-IDF build directory") orelse "../build";
+    const idf_build = b.option([]const u8, "idf-build-dir", "Configured ESP-IDF build directory") orelse "../../build";
     const config_dir = b.pathJoin(&.{ idf_build, "config" });
     const config = std.fs.cwd().readFileAlloc(b.allocator, b.pathJoin(&.{ config_dir, "sdkconfig.h" }), 1024 * 1024) catch
         @panic("Missing ESP-IDF sdkconfig.h; configure the parent project first, or set -Didf-build-dir");

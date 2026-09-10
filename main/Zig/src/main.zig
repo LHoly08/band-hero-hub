@@ -4,9 +4,9 @@ const c = @cImport({
     @cInclude("freertos/queue.h");
     @cInclude("freertos/task.h");
     @cInclude("esp_now.h");
-    @cInclude("esp_log.h");
     @cInclude("nvs_flash.h");
     @cInclude("stdio.h");
+    @cInclude("esp_mac.h");
 });
 
 fn Queue(comptime T: type, comptime size: c_ulonglong) type {
@@ -106,6 +106,31 @@ const USBHub = struct {
 
 export fn app_main() void {
     var state: State = .Configuring;
+
+    c.vTaskDelay(c.pdMS_TO_TICKS(1000));
+
+    {
+        // Display MAC Address on Startup to Serial
+
+        var mac: [6]u8 = undefined;
+        _ = c.esp_read_mac(&mac, c.ESP_MAC_EFUSE_FACTORY);
+
+        const hex: [12]u8 = std.fmt.bytesToHex(mac, .upper);
+        var buffer: [18]u8 = [_]u8{':'} ** 18;
+        buffer[17] = '\n';
+
+        for (0..6) |i| {
+            const indexB: usize = i * 3;
+            const indexH: usize = i * 2;
+            buffer[indexB] = hex[indexH];
+            buffer[indexB + 1] = hex[indexH + 1];
+        }
+
+        _ = c.fwrite("MAC: ", 1, 5, c.stdout);
+        _ = c.fwrite(&buffer, 1, buffer.len, c.stdout);
+        _ = c.fflush(c.stdout);
+    }
+    c.vTaskDelay(c.pdMS_TO_TICKS(1000));
 
     while (true) {
         switch (state) {

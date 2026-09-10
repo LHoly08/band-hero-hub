@@ -22,11 +22,11 @@ idf_component_register(
     SRCS "zig_headers.c"
     REQUIRES
         nvs_flash esp_wifi esp_netif freertos
-        esp_hid driver
+        esp_hid esp_hw_support driver
 )
 
 add_prebuilt_library(
     zig_app
-    "${CMAKE_CURRENT_LIST_DIR}/../Zig/zig-out/lib/libzig_app.a"
+    "${CMAKE_CURRENT_LIST_DIR}/Zig/zig-out/lib/libzig_app.a"
 )
 target_link_libraries(${COMPONENT_LIB} PUBLIC zig_app)

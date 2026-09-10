@@ -4,8 +4,8 @@ Build with Zig 0.15.2 from this directory:
 zig build
 ```
 
-The parent ESP-IDF project must already be configured for ESP32-C6. The build
-reads `../build/config/sdkconfig.h` and `../build/compile_commands.json` to reuse
+The ESP-IDF project at the repository root must already be configured for ESP32-C6. The build
+reads `../../build/config/sdkconfig.h` and `../../build/compile_commands.json` to reuse
 its component include paths and locate the ESP toolchain's C library headers.
 Reconfigure ESP-IDF if you move the project or change toolchains.
 
@@ -22,11 +22,11 @@ archive instead of compiling the C++ application. Its original configuration is
 preserved as comments in `main/CMakeLists.txt`; `main/zig_headers.c` keeps the
 component's include paths available in the compilation database.
 
-From the parent project directory, with ESP-IDF activated:
+From the repository root, with ESP-IDF activated:
 
 ```sh
 idf.py reconfigure
-(cd Zig && zig build)
+(cd main/Zig && zig build)
 idf.py build
 ```
 
