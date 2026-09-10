@@ -2,13 +2,6 @@
 
 #include "hub.hpp"
 
-#include "ble_reports.hpp"
-#include "esp_bt.h"
-#include "esp_bt_defs.h"
-#include "esp_bt_device.h"
-#include "esp_bt_main.h"
-#include "esp_gap_ble_api.h"
-#include "esp_log.h"
 #include "esp_now.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
@@ -59,6 +52,32 @@ void Hub::loop() noexcept {
       }
     }
     vTaskDelay(LOOP_DELAY_TICKS);
+  }
+}
+
+Hub *Hub::instance = nullptr;
+
+void Hub::ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
+                           const std::uint8_t *data, int data_len) noexcept {
+  if (instance == nullptr || esp_now_info == nullptr ||
+      esp_now_info->src_addr == nullptr || data == nullptr ||
+      data_len != sizeof(std::uint32_t)) {
+    return;
+  }
+
+  std::uint32_t val{};
+  std::memcpy(&val, data, data_len);
+
+  std::array<std::uint8_t, 6> macAddress{};
+  std::memcpy(macAddress.data(), esp_now_info->src_addr, macAddress.size());
+
+  const auto &m_peers = instance->m_peers;
+  for (std::uint8_t i{}; i < m_peers.size(); ++i) {
+    if (macAddress == m_peers[i]) {
+      val |= i;
+      (void)instance->m_queue.push(val);
+      break;
+    }
   }
 }
 

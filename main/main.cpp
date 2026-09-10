@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstdio>
@@ -28,23 +29,10 @@ extern "C" void app_main() {
     std::array<std::uint8_t, 6> mac{};
     (void)esp_read_mac(mac.data(), ESP_MAC_EFUSE_FACTORY);
 
-    constexpr std::uint8_t n = 17;
+    std::array<std::uint8_t, 18> hex;
 
-    constexpr auto h = [&]() -> std::array<std::uint8_t, n> {
-      std::vector<std::uint8_t> v(n, ':');
-      std::array<std::uint8_t, n> a{};
-      std::memcpy(a.data(), v.data(), a.size());
-
-      return a;
-    };
-
-    std::array<std::uint8_t, n> hex;
-
-    {
-      std::array<std::uint8_t, n> t = h();
-      std::ranges::transform(t.begin(), t.end(), hex.begin(),
-                             [](std::uint8_t i) -> std::uint8_t { return i; });
-    }
+    std::ranges::transform(hex.begin(), hex.end() - 1, hex.begin(),
+                           [](std::uint8_t _) -> std::uint8_t { return ':'; });
     hex.back() = '\n';
 
     auto hexDigit = [](std::uint8_t value) -> std::uint8_t {
@@ -57,7 +45,7 @@ extern "C" void app_main() {
     }
 
     std::fwrite("MAC: ", 1, 5, stdout);
-    std::fwrite(hex.data(), 1, n, stdout);
+    std::fwrite(hex.data(), 1, hex.size(), stdout);
     std::fflush(stdout);
   }
   vTaskDelay(pdMS_TO_TICKS(1000));
@@ -66,6 +54,11 @@ infinite_loop: {
   switch (state) {
 
   case bh::State::Configuring: {
+    // TODO: Implement detection and saving of instruments in nvs
+
+    std::fwrite("Hello!\n", 1, 7, stdout);
+    std::fflush(stdout);
+    vTaskDelay(pdMS_TO_TICKS(1000));
   } break;
 
   case bh::State::WorkingUSB: {
