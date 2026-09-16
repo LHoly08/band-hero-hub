@@ -1,7 +1,8 @@
-#include <cstdio>
+#include "config.hpp"
 
-#include "hub.hpp"
+#include <cstring>
 
+#include "esp_err.h"
 #include "esp_now.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
@@ -11,14 +12,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "hal/gpio_types.h"
+
 namespace bh {
 
-static constexpr TickType_t LOOP_DELAY_TICKS{
-    pdMS_TO_TICKS(1) > 0 ? pdMS_TO_TICKS(1) : 1};
-
-Hub::Hub(const MAC &peers, State &state) noexcept
+Config::Config(MAC &peers, State &state) noexcept
     : m_peers(peers), state(state) {
   ESP_ERROR_CHECK(gpio_install_isr_service(0));
+
   {
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -38,14 +39,13 @@ Hub::Hub(const MAC &peers, State &state) noexcept
 
     ESP_ERROR_CHECK(gpio_config(&cfg));
   }
-
   instance = this;
 
   ESP_ERROR_CHECK(gpio_isr_handler_add(PIN, ButtonPressed, nullptr));
   ESP_ERROR_CHECK(esp_now_register_recv_cb(ReceivedCallback));
 }
 
-Hub::~Hub() noexcept {
+Config::~Config() noexcept {
 
   (void)esp_now_unregister_recv_cb();
   (void)esp_now_deinit();
@@ -59,44 +59,31 @@ Hub::~Hub() noexcept {
   instance = nullptr;
 }
 
-void Hub::loop() noexcept {
+void Config::loop() noexcept {
 
-  while (state == State::WorkingUSB) {
-
-    while (!m_queue.empty()) {
-      if (std::uint32_t val{}; m_queue.pop(val)) {
-
-        (void)std::fwrite(&val, 1, sizeof(val), stdout);
-        (void)std::fflush(stdout);
-      }
-    }
-    vTaskDelay(LOOP_DELAY_TICKS);
+  while (state == State::Configuring) {
+    // Display to OLED
   }
 }
 
-Hub *Hub::instance = nullptr;
+Config *Config::instance = nullptr;
 
-void Hub::ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
-                           const std::uint8_t *data, int data_len) noexcept {
+void Config::ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
+                              const std::uint8_t *data, int data_len) noexcept {
+
   if (instance == nullptr || esp_now_info == nullptr ||
       esp_now_info->src_addr == nullptr || data == nullptr ||
       data_len != sizeof(std::uint32_t)) {
     return;
   }
 
-  std::uint32_t val{};
-  std::memcpy(&val, data, data_len);
+  auto &m_peers = instance->m_peers;
 
-  std::array<std::uint8_t, 6> macAddress{};
-  std::memcpy(macAddress.data(), esp_now_info->src_addr, macAddress.size());
+  if (std::array<std::uint8_t, 6> macAddress{};
+      m_peers.size() != m_peers.capacity()) {
 
-  const auto &m_peers = instance->m_peers;
-  for (std::uint8_t i{}; i < m_peers.size(); ++i) {
-    if (macAddress == m_peers[i]) {
-      val |= i;
-      (void)instance->m_queue.push<Type::ISR>(val);
-      break;
-    }
+    std::memcpy(macAddress.data(), esp_now_info->src_addr, macAddress.size());
+    m_peers.push_back(macAddress);
   }
 }
 

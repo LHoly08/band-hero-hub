@@ -1,37 +1,36 @@
-#ifndef BH_HUB
-#define BH_HUB
+#ifndef BH_CONFIG
+#define BH_CONFIG
 
 #include "esp_attr.h"
 #include "esp_now.h"
-#include "freertos/FreeRTOS.h"
-#include "queue.hpp"
 #include "utils.hpp"
-#include <array>
 #include <cstdint>
-#include <cstring>
 
 namespace bh {
 
-class Hub {
+class Config {
 public:
-  explicit Hub(const MAC &peers, State &state) noexcept;
-  ~Hub() noexcept;
+  explicit Config(MAC &macs, State &state) noexcept;
+  ~Config() noexcept;
+
   void loop() noexcept;
 
 private:
-  static Hub *instance;
+  static Config *instance;
 
   static void IRAM_ATTR
   ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
                    const std::uint8_t *data, int data_len) noexcept;
 
   inline static void IRAM_ATTR ButtonPressed(void *args) noexcept {
-    instance->state = State::Configuring;
+    instance->state = State::WorkingUSB;
   }
 
-  Queue<std::uint32_t, 40> m_queue;
-  const MAC &m_peers;
+  inline static void IRAM_ATTR ResetConfig(void *args) noexcept {
+    (static_cast<MAC *>(args))->clear();
+  }
 
+  MAC &m_peers;
   State &state;
 };
 
