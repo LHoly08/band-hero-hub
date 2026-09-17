@@ -120,8 +120,6 @@ pub const ConfigHub = struct {
             }
 
             self.m_oled.sendBuffer();
-
-            c.vTaskDelay(c.pdMS_TO_TICKS(1));
         }
     }
 

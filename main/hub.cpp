@@ -13,9 +13,6 @@
 
 namespace bh {
 
-static constexpr TickType_t LOOP_DELAY_TICKS{
-    pdMS_TO_TICKS(1) > 0 ? pdMS_TO_TICKS(1) : 1};
-
 Hub::Hub(const MAC &peers, State &state) noexcept
     : m_peers(peers), state(state) {
   ESP_ERROR_CHECK(gpio_install_isr_service(0));
@@ -63,14 +60,11 @@ void Hub::loop() noexcept {
 
   while (state == State::WorkingUSB) {
 
-    while (!m_queue.empty()) {
-      if (std::uint32_t val{}; m_queue.pop(val)) {
+    if (std::uint32_t val{}; m_queue.pop(val)) {
 
-        (void)std::fwrite(&val, 1, sizeof(val), stdout);
-        (void)std::fflush(stdout);
-      }
+      (void)std::fwrite(&val, 1, sizeof(val), stdout);
+      (void)std::fflush(stdout);
     }
-    vTaskDelay(LOOP_DELAY_TICKS);
   }
 }
 

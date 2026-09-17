@@ -68,11 +68,10 @@ pub const USBHub = struct {
         while (self.m_state.* == .WorkingUSB) {
             var val: u32 = undefined;
 
-            while (self.m_queue.receive(&val)) {
+            if (self.m_queue.receive(&val)) {
                 _ = c.fwrite(&val, 1, @sizeOf(@TypeOf(val)), c.stdout);
                 _ = c.fflush(c.stdout);
             }
-            c.vTaskDelay(c.pdMS_TO_TICKS(1));
         }
     }
 

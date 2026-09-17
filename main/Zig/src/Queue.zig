@@ -43,7 +43,7 @@ pub fn Queue(comptime T: type, comptime size: c_ulonglong) type {
         }
 
         pub fn receive(self: *Self, out_item: *T) bool {
-            return (c.xQueueReceive(self.handle, @ptrCast(out_item), 0) == c.pdTRUE);
+            return (c.xQueueReceive(self.handle, @ptrCast(out_item), c.pdMS_TO_TICKS(10)) == c.pdTRUE);
         }
 
         pub fn receiveISR(self: *Self, out_item: *T) bool {

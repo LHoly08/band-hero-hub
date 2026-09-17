@@ -2,10 +2,12 @@
 #define BH_QUEUE
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/projdefs.h"
 #include "freertos/queue.h"
 #include <array>
 #include <bit>
 #include <cstdint>
+#include <type_traits>
 
 namespace bh {
 
@@ -15,6 +17,8 @@ enum class Type {
 };
 
 template <typename T, std::size_t S> class Queue {
+  static_assert(std::is_trivially_copyable_v<T>);
+
 public:
   Queue() noexcept;
   ~Queue() noexcept;
@@ -46,26 +50,20 @@ template <typename T, std::size_t S> Queue<T, S>::~Queue() noexcept {
 template <typename T, std::size_t S>
 template <Type type>
 bool Queue<T, S>::pop(T &outItem) noexcept {
-  std::array<char, sizeof(T)> buffer{};
-  BaseType_t success = pdFALSE;
 
   if constexpr (type == Type::NORMAL) {
-    success = xQueueReceive(m_queue, buffer.data(), static_cast<TickType_t>(0));
+    return (xQueueReceive(m_queue, &outItem, pdMS_TO_TICKS(10)) == pdTRUE);
   } else {
+    BaseType_t success = pdFALSE;
+
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     success =
-        xQueueReceiveFromISR(m_queue, buffer.data(), &xHigherPriorityTaskWoken);
+        xQueueReceiveFromISR(m_queue, &outItem, &xHigherPriorityTaskWoken);
     if (xHigherPriorityTaskWoken == pdTRUE) {
       portYIELD_FROM_ISR();
     }
+    return (success == pdTRUE);
   }
-
-  if (success == pdTRUE) {
-    outItem = std::bit_cast<T>(buffer);
-    return true;
-  }
-
-  return false;
 }
 
 template <typename T, std::size_t S>
