@@ -3,4 +3,9 @@
 #
 # default:
 CONFIG_IDF_TARGET="esp32c6"
-CONFIG_BT_ENABLED=y
+
+#
+# Compiler options
+#
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+# end of Compiler options

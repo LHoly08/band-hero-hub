@@ -32,6 +32,8 @@ elseif(IMPL STREQUAL "zig")
     )
 
     find_program(ZIG_EXECUTABLE NAMES zig REQUIRED)
+    set(ZIG_OPTIMIZE "ReleaseSmall" CACHE STRING "Zig optimization mode")
+    set_property(CACHE ZIG_OPTIMIZE PROPERTY STRINGS Debug ReleaseSafe ReleaseFast ReleaseSmall)
     set(ZIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Zig")
     set(ZIG_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/zig-out")
     set(ZIG_LIB "${ZIG_PREFIX}/lib/libzig_app.a")
@@ -43,6 +45,7 @@ elseif(IMPL STREQUAL "zig")
             --prefix "${ZIG_PREFIX}"
             --global-cache-dir "${CMAKE_CURRENT_BINARY_DIR}/zig-global-cache"
             "-Didf-build-dir=${CMAKE_BINARY_DIR}"
+            "-Doptimize=${ZIG_OPTIMIZE}"
         BYPRODUCTS "${ZIG_LIB}"
         WORKING_DIRECTORY "${ZIG_DIR}"
         COMMENT "Building Zig firmware library"

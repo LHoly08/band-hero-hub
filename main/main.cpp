@@ -6,6 +6,7 @@
 #include <ranges>
 #include <vector>
 
+#include "config.hpp"
 #include "esp_event.h"
 #include "esp_mac.h"
 #include "esp_netif.h"

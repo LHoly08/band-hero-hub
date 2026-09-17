@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
     const main_module = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
-        .optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode") orelse .ReleaseFast,
+        .optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode") orelse .ReleaseSmall,
     });
 
     // Reuse ESP-IDF's component include paths, including generated configuration.
