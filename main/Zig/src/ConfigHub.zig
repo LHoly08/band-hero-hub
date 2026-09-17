@@ -6,6 +6,8 @@ const InplaceVector = @import("InplaceVector.zig").InplaceVector;
 const State = @import("Util.zig").State;
 const PIN = @import("Util.zig").PIN;
 
+const Oled = @import("Oled.zig").Oled;
+
 const c = @cImport({
     @cInclude("freertos/FreeRTOS.h");
     @cInclude("esp_wifi.h");
@@ -21,6 +23,7 @@ pub const ConfigHub = struct {
     const Self = @This();
 
     m_queue: Queue([6]u8, 3),
+    m_oled: Oled,
     m_macs: *InplaceVector([6]u8, 4),
     m_state: *State,
     m_reset: bool,
@@ -32,6 +35,7 @@ pub const ConfigHub = struct {
 
         return ConfigHub{
             .m_queue = q,
+            .m_oled = Oled.Init(),
             .m_macs = macs,
             .m_state = initState,
             .m_reset = false,
@@ -39,6 +43,8 @@ pub const ConfigHub = struct {
     }
 
     pub fn start(self: *Self) void {
+        self.m_oled.Start();
+
         zig_esp_error_check(c.gpio_install_isr_service(0));
         {
             zig_esp_error_check(@import("Util.zig").zig_wifi_init_default());
@@ -102,6 +108,19 @@ pub const ConfigHub = struct {
                     _ = self.m_macs.pushBack(mac);
                 }
             }
+            self.m_oled.clearBuffer();
+
+            self.m_oled.drawBase();
+            for (0..self.m_macs.len) |i| {
+                const macAddr = self.m_macs.at(i);
+
+                if (macAddr) |macAddress| {
+                    self.m_oled.drawLine(macAddress.*, @intCast(i));
+                }
+            }
+
+            self.m_oled.sendBuffer();
+
             c.vTaskDelay(c.pdMS_TO_TICKS(1));
         }
     }

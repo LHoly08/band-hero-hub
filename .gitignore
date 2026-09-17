@@ -15,3 +15,6 @@ main/Zig/zig-cache/
 .idea/
 *.swp
 *.swo
+
+# Dependencies lock file
+dependencies.lock

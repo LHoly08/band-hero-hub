@@ -3,6 +3,8 @@
 
 #include "esp_attr.h"
 #include "esp_now.h"
+#include "oled.hpp"
+#include "queue.hpp"
 #include "utils.hpp"
 #include <cstdint>
 
@@ -30,8 +32,10 @@ private:
     (static_cast<MAC *>(args))->clear();
   }
 
+  Queue<std::array<std::uint8_t, 6>, 3> m_queue{};
   MAC &m_peers;
   State &state;
+  Oled m_oled{};
 };
 
 } // namespace bh

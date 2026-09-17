@@ -68,7 +68,7 @@ pub const USBHub = struct {
         while (self.m_state.* == .WorkingUSB) {
             var val: u32 = undefined;
 
-            while (!self.m_queue.receive(&val)) {
+            while (self.m_queue.receive(&val)) {
                 _ = c.fwrite(&val, 1, @sizeOf(@TypeOf(val)), c.stdout);
                 _ = c.fflush(c.stdout);
             }
@@ -109,7 +109,7 @@ pub const USBHub = struct {
 
             for (0..self.m_macs.len) |i| {
                 const macAddr = self.m_macs.at(i);
-                if (macAddr != null and eql(macAddr.?.*, &mac)) {
+                if (macAddr != null and eql(u8, macAddr.?, &mac)) {
                     const value: u32 = readInt(u32, @as(*const [4]u8, @ptrCast(data)), .little) | i;
                     _ = self.m_queue.sendISR(&value);
                 }

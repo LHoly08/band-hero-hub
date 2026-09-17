@@ -1,6 +1,6 @@
-#include "config.hpp"
-
 #include <cstring>
+
+#include "config.hpp"
 
 #include "esp_err.h"
 #include "esp_now.h"
@@ -62,7 +62,29 @@ Config::~Config() noexcept {
 void Config::loop() noexcept {
 
   while (state == State::Configuring) {
-    // Display to OLED
+    std::array<std::uint8_t, 6> macAddr{};
+
+    while (m_queue.pop(macAddr)) {
+
+      bool exists{false};
+      for (const auto &mac : m_peers) {
+        if (mac == macAddr) {
+          exists = true;
+          break;
+        }
+      }
+      if (!exists && m_peers.size() != m_peers.capacity()) {
+        m_peers.push_back(macAddr);
+      }
+    }
+    m_oled.clearBuffer();
+
+    m_oled.drawBase();
+    for (std::uint8_t i{}; i < m_peers.size(); ++i) {
+      m_oled.drawLine(m_peers[i], i);
+    }
+
+    m_oled.sendBuffer();
   }
 }
 
@@ -77,14 +99,9 @@ void Config::ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
     return;
   }
 
-  auto &m_peers = instance->m_peers;
-
-  if (std::array<std::uint8_t, 6> macAddress{};
-      m_peers.size() != m_peers.capacity()) {
-
-    std::memcpy(macAddress.data(), esp_now_info->src_addr, macAddress.size());
-    m_peers.push_back(macAddress);
-  }
+  std::array<std::uint8_t, 6> macAddress{};
+  std::memcpy(macAddress.data(), esp_now_info->src_addr, macAddress.size());
+  (void)instance->m_queue.push<Type::ISR>(macAddress);
 }
 
 } // namespace bh

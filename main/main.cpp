@@ -55,11 +55,9 @@ infinite_loop: {
   switch (state) {
 
   case bh::State::Configuring: {
-    // TODO: Implement detection and saving of instruments in nvs
 
-    std::fwrite("Hello!\n", 1, 7, stdout);
-    std::fflush(stdout);
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    bh::Config hub(instrumentMacs, state);
+    hub.loop();
   } break;
 
   case bh::State::WorkingUSB: {

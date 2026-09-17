@@ -35,9 +35,9 @@ pub fn InplaceVector(comptime T: type, comptime capacity: u32) type {
             return false;
         }
 
-        pub fn at(self: *Self, i: u32) ?*T {
+        pub fn at(self: *const Self, i: u32) ?*const T {
             if (self.len > i) {
-                return &self.m_buffer[self.len];
+                return &self.m_buffer[i];
             }
             return null;
         }
