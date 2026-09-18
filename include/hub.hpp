@@ -14,25 +14,27 @@ namespace bh {
 
 class Hub {
 public:
-  explicit Hub(const MAC &peers, State &state) noexcept;
+  explicit Hub(const MAC &peers, AtomicState &state) noexcept;
   ~Hub() noexcept;
   void loop() noexcept;
 
 private:
   static Hub *instance;
 
-  static void IRAM_ATTR
-  ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
+  static void ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
                    const std::uint8_t *data, int data_len) noexcept;
 
-  inline static void IRAM_ATTR ButtonPressed(void *args) noexcept {
-    instance->state = State::Configuring;
+  static void IRAM_ATTR ButtonPressed(void *args) noexcept {
+    if (args != nullptr) {
+      static_cast<AtomicState *>(args)->store(
+          State::Configuring, std::memory_order_relaxed);
+    }
   }
 
   Queue<std::uint32_t, 40> m_queue;
   const MAC &m_peers;
 
-  State &state;
+  AtomicState &state;
 };
 
 } // namespace bh

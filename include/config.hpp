@@ -7,12 +7,13 @@
 #include "queue.hpp"
 #include "utils.hpp"
 #include <cstdint>
+#include <iterator>
 
 namespace bh {
 
 class Config {
 public:
-  explicit Config(MAC &macs, State &state) noexcept;
+  explicit Config(MAC &macs, AtomicState &state) noexcept;
   ~Config() noexcept;
 
   void loop() noexcept;
@@ -20,22 +21,28 @@ public:
 private:
   static Config *instance;
 
-  static void IRAM_ATTR
-  ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
+  static void ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
                    const std::uint8_t *data, int data_len) noexcept;
 
-  inline static void IRAM_ATTR ButtonPressed(void *args) noexcept {
-    instance->state = State::WorkingUSB;
+  static void IRAM_ATTR ButtonPressed(void *args) noexcept {
+    if (args != nullptr) {
+      static_cast<AtomicState *>(args)->store(
+          State::WorkingUSB, std::memory_order_relaxed);
+    }
   }
 
-  inline static void IRAM_ATTR ResetConfig(void *args) noexcept {
-    (static_cast<MAC *>(args))->clear();
+  static void IRAM_ATTR ResetConfig(void *args) noexcept {
+    if (args != nullptr) {
+      static_cast<std::atomic<std::uint32_t> *>(args)->store(
+          1, std::memory_order_relaxed);
+    }
   }
 
   Queue<std::array<std::uint8_t, 6>, 3> m_queue{};
   MAC &m_peers;
-  State &state;
-  Oled m_oled{};
+  AtomicState &state;
+  // Oled m_oled{};
+  std::atomic<std::uint32_t> m_reset{0};
 };
 
 } // namespace bh

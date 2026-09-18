@@ -13,6 +13,7 @@ const c = @cImport({
     @cInclude("freertos/FreeRTOS.h");
     @cInclude("esp_wifi.h");
     @cInclude("driver/gpio.h");
+    @cInclude("esp_intr_alloc.h");
     @cInclude("stdio.h");
     @cInclude("esp_now.h");
     @cInclude("freertos/task.h");
@@ -38,7 +39,7 @@ pub const USBHub = struct {
     }
 
     pub fn start(self: *Self) void {
-        zig_esp_error_check(c.gpio_install_isr_service(0));
+        zig_esp_error_check(c.gpio_install_isr_service(c.ESP_INTR_FLAG_IRAM));
         {
             zig_esp_error_check(@import("Util.zig").zig_wifi_init_default());
             zig_esp_error_check(c.esp_wifi_set_mode(c.WIFI_MODE_STA));
@@ -59,13 +60,12 @@ pub const USBHub = struct {
         }
 
         zig_esp_error_check(c.gpio_isr_handler_add(PIN, Self.ButtonPressed, self.m_state));
-        zig_esp_error_check(c.esp_now_register_recv_cb(Self.ReceivedCallback));
-
         Self.instance = self;
+        zig_esp_error_check(c.esp_now_register_recv_cb(Self.ReceivedCallback));
     }
 
     pub fn loop(self: *Self) void {
-        while (self.m_state.* == .WorkingUSB) {
+        while (@atomicLoad(State, self.m_state, .monotonic) == .WorkingUSB) {
             var val: u32 = undefined;
 
             if (self.m_queue.receive(&val)) {
@@ -90,9 +90,10 @@ pub const USBHub = struct {
         self.m_queue.deinit();
     }
 
-    fn ButtonPressed(args: ?*anyopaque) callconv(.c) void {
+    fn ButtonPressed(args: ?*anyopaque) linksection(".iram1.usbhub_button") callconv(.c) void {
         if (args) |arg| {
-            @as(*State, @ptrCast(@alignCast(arg))).* = State.Configuring;
+            const state: *State = @ptrCast(@alignCast(arg));
+            @atomicStore(State, state, .Configuring, .monotonic);
         }
     }
 
@@ -110,7 +111,7 @@ pub const USBHub = struct {
                 const macAddr = self.m_macs.at(i);
                 if (macAddr != null and eql(u8, macAddr.?, &mac)) {
                     const value: u32 = readInt(u32, @as(*const [4]u8, @ptrCast(data)), .little) | i;
-                    _ = self.m_queue.sendISR(&value);
+                    _ = self.m_queue.send(&value);
                 }
             }
         }

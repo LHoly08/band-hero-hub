@@ -5,12 +5,14 @@ pub const c = @cImport({
     @cInclude("esp32_hw_i2c.h");
 });
 
-pub const State = enum(u8) {
+// Native-width flags avoid out-of-line byte atomic helpers on ESP32-C6.
+pub const State = enum(u32) {
     Configuring,
     WorkingUSB,
 };
 
-pub const PIN: c.gpio_num_t = c.GPIO_NUM_0;
+pub const PIN: c.gpio_num_t = c.GPIO_NUM_20;
+pub const RESET_PIN: c.gpio_num_t = c.GPIO_NUM_19;
 
 pub extern fn zig_wifi_init_default() c.esp_err_t;
 

@@ -23,7 +23,7 @@ extern "C" void app_main() {
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  bh::State state{bh::State::WorkingUSB};
+  bh::AtomicState state{bh::State::WorkingUSB};
 
   bh::MAC instrumentMacs{};
 
@@ -53,7 +53,7 @@ extern "C" void app_main() {
   vTaskDelay(pdMS_TO_TICKS(1000));
 
 infinite_loop: {
-  switch (state) {
+  switch (state.load(std::memory_order_relaxed)) {
 
   case bh::State::Configuring: {
 

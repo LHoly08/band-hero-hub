@@ -12,6 +12,7 @@ const c = @cImport({
     @cInclude("freertos/FreeRTOS.h");
     @cInclude("esp_wifi.h");
     @cInclude("driver/gpio.h");
+    @cInclude("esp_intr_alloc.h");
     @cInclude("stdio.h");
     @cInclude("esp_now.h");
     @cInclude("freertos/task.h");
@@ -26,7 +27,7 @@ pub const ConfigHub = struct {
     m_oled: Oled,
     m_macs: *InplaceVector([6]u8, 4),
     m_state: *State,
-    m_reset: bool,
+    m_reset: u32,
 
     var instance: ?*Self = null;
 
@@ -38,14 +39,14 @@ pub const ConfigHub = struct {
             .m_oled = Oled.Init(),
             .m_macs = macs,
             .m_state = initState,
-            .m_reset = false,
+            .m_reset = 0,
         };
     }
 
     pub fn start(self: *Self) void {
-        self.m_oled.Start();
+        //self.m_oled.Start();
 
-        zig_esp_error_check(c.gpio_install_isr_service(0));
+        zig_esp_error_check(c.gpio_install_isr_service(c.ESP_INTR_FLAG_IRAM));
         {
             zig_esp_error_check(@import("Util.zig").zig_wifi_init_default());
             zig_esp_error_check(c.esp_wifi_set_mode(c.WIFI_MODE_STA));
@@ -64,7 +65,7 @@ pub const ConfigHub = struct {
 
             zig_esp_error_check(c.gpio_config(&cfg));
         }
-        const ResetPin: c.gpio_num_t = c.GPIO_NUM_1;
+        const ResetPin = @import("Util.zig").RESET_PIN;
         {
             var cfg: c.gpio_config_t = .{};
 
@@ -79,20 +80,20 @@ pub const ConfigHub = struct {
 
         zig_esp_error_check(c.gpio_isr_handler_add(ResetPin, Self.ResetPressed, &self.m_reset));
         zig_esp_error_check(c.gpio_isr_handler_add(PIN, Self.ButtonPressed, self.m_state));
-        zig_esp_error_check(c.esp_now_register_recv_cb(Self.ReceivedCallback));
-
         Self.instance = self;
+        zig_esp_error_check(c.esp_now_register_recv_cb(Self.ReceivedCallback));
     }
 
     pub fn loop(self: *Self) void {
-        while (self.m_state.* == .Configuring) {
-            if (self.m_reset) {
+        while (@atomicLoad(State, self.m_state, .monotonic) == .Configuring) {
+            if (@atomicRmw(u32, &self.m_reset, .Xchg, 0, .monotonic) != 0) {
                 self.m_macs.clear();
-                self.m_reset = false;
             }
             var mac: [6]u8 = undefined;
 
-            while (self.m_queue.receive(&mac)) {
+            while (@atomicLoad(State, self.m_state, .monotonic) == .Configuring and
+                @atomicLoad(u32, &self.m_reset, .monotonic) == 0 and self.m_queue.receive(&mac))
+            {
                 var exists: bool = false;
 
                 for (0..self.m_macs.len) |i| {
@@ -108,18 +109,19 @@ pub const ConfigHub = struct {
                     _ = self.m_macs.pushBack(mac);
                 }
             }
-            self.m_oled.clearBuffer();
 
-            self.m_oled.drawBase();
-            for (0..self.m_macs.len) |i| {
-                const macAddr = self.m_macs.at(i);
+            //self.m_oled.clearBuffer();
 
-                if (macAddr) |macAddress| {
-                    self.m_oled.drawLine(macAddress.*, @intCast(i));
-                }
-            }
+            //self.m_oled.drawBase();
+            //for (0..self.m_macs.len) |i| {
+            //    const macAddr = self.m_macs.at(i);
 
-            self.m_oled.sendBuffer();
+            //    if (macAddr) |macAddress| {
+            //        self.m_oled.drawLine(macAddress.*, @intCast(i));
+            //    }
+            //}
+
+            //self.m_oled.sendBuffer();
         }
     }
 
@@ -131,7 +133,7 @@ pub const ConfigHub = struct {
         _ = c.esp_wifi_deinit();
 
         _ = c.gpio_isr_handler_remove(PIN);
-        _ = c.gpio_isr_handler_remove(c.GPIO_NUM_1);
+        _ = c.gpio_isr_handler_remove(@import("Util.zig").RESET_PIN);
         _ = c.gpio_uninstall_isr_service();
 
         Self.instance = null;
@@ -139,15 +141,17 @@ pub const ConfigHub = struct {
         self.m_queue.deinit();
     }
 
-    fn ResetPressed(args: ?*anyopaque) callconv(.c) void {
+    fn ResetPressed(args: ?*anyopaque) linksection(".iram1.config_reset") callconv(.c) void {
         if (args) |arg| {
-            @as(*bool, @ptrCast(arg)).* = true;
+            const reset: *u32 = @ptrCast(@alignCast(arg));
+            @atomicStore(u32, reset, 1, .monotonic);
         }
     }
 
-    fn ButtonPressed(args: ?*anyopaque) callconv(.c) void {
+    fn ButtonPressed(args: ?*anyopaque) linksection(".iram1.confighub_button") callconv(.c) void {
         if (args) |arg| {
-            @as(*State, @ptrCast(@alignCast(arg))).* = State.WorkingUSB;
+            const state: *State = @ptrCast(@alignCast(arg));
+            @atomicStore(State, state, .WorkingUSB, .monotonic);
         }
     }
 
@@ -162,7 +166,7 @@ pub const ConfigHub = struct {
         }
         if (Self.instance) |self| {
             const mac: [6]u8 = esp_now_info.*.src_addr[0..6].*;
-            _ = self.m_queue.sendISR(&mac);
+            _ = self.m_queue.send(&mac);
         }
     }
 };

@@ -52,7 +52,7 @@ export fn app_main() void {
     var macs = InplaceVector([6]u8, 4).init();
 
     while (true) {
-        switch (state) {
+        switch (@atomicLoad(State, &state, .monotonic)) {
             State.Configuring => {
                 var hub: ConfigHub = ConfigHub.init(&state, &macs);
                 defer hub.deinit();

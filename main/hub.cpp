@@ -4,6 +4,7 @@
 
 #include "esp_now.h"
 #include "esp_wifi.h"
+#include "esp_intr_alloc.h"
 #include "nvs_flash.h"
 
 #include "driver/gpio.h"
@@ -13,9 +14,9 @@
 
 namespace bh {
 
-Hub::Hub(const MAC &peers, State &state) noexcept
+Hub::Hub(const MAC &peers, AtomicState &state) noexcept
     : m_peers(peers), state(state) {
-  ESP_ERROR_CHECK(gpio_install_isr_service(0));
+  ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_IRAM));
   {
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -38,7 +39,7 @@ Hub::Hub(const MAC &peers, State &state) noexcept
 
   instance = this;
 
-  ESP_ERROR_CHECK(gpio_isr_handler_add(PIN, ButtonPressed, nullptr));
+  ESP_ERROR_CHECK(gpio_isr_handler_add(PIN, ButtonPressed, &state));
   ESP_ERROR_CHECK(esp_now_register_recv_cb(ReceivedCallback));
 }
 
@@ -58,7 +59,7 @@ Hub::~Hub() noexcept {
 
 void Hub::loop() noexcept {
 
-  while (state == State::WorkingUSB) {
+  while (state.load(std::memory_order_relaxed) == State::WorkingUSB) {
 
     if (std::uint32_t val{}; m_queue.pop(val)) {
 
@@ -88,7 +89,7 @@ void Hub::ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
   for (std::uint8_t i{}; i < m_peers.size(); ++i) {
     if (macAddress == m_peers[i]) {
       val |= i;
-      (void)instance->m_queue.push<Type::ISR>(val);
+      (void)instance->m_queue.push(val);
       break;
     }
   }
