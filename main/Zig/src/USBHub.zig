@@ -112,6 +112,7 @@ pub const USBHub = struct {
                 if (macAddr != null and eql(u8, macAddr.?, &mac)) {
                     const value: u32 = readInt(u32, @as(*const [4]u8, @ptrCast(data)), .little) | i;
                     _ = self.m_queue.send(&value);
+                    return;
                 }
             }
         }

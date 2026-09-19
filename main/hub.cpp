@@ -2,9 +2,9 @@
 
 #include "hub.hpp"
 
+#include "esp_intr_alloc.h"
 #include "esp_now.h"
 #include "esp_wifi.h"
-#include "esp_intr_alloc.h"
 #include "nvs_flash.h"
 
 #include "driver/gpio.h"
@@ -73,6 +73,7 @@ Hub *Hub::instance = nullptr;
 
 void Hub::ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
                            const std::uint8_t *data, int data_len) noexcept {
+
   if (instance == nullptr || esp_now_info == nullptr ||
       esp_now_info->src_addr == nullptr || data == nullptr ||
       data_len != sizeof(std::uint32_t)) {
@@ -86,11 +87,13 @@ void Hub::ReceivedCallback(const esp_now_recv_info_t *esp_now_info,
   std::memcpy(macAddress.data(), esp_now_info->src_addr, macAddress.size());
 
   const auto &m_peers = instance->m_peers;
+
   for (std::uint8_t i{}; i < m_peers.size(); ++i) {
+
     if (macAddress == m_peers[i]) {
       val |= i;
       (void)instance->m_queue.push(val);
-      break;
+      return;
     }
   }
 }
