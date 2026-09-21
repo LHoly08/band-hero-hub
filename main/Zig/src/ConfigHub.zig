@@ -1,4 +1,4 @@
-const eql = @import("std").mem.eql;
+:1const eql = @import("std").mem.eql;
 
 const Queue = @import("Queue.zig").Queue;
 const InplaceVector = @import("InplaceVector.zig").InplaceVector;
@@ -143,6 +143,7 @@ pub const ConfigHub = struct {
 
     fn ResetPressed(args: ?*anyopaque) linksection(".iram1.config_reset") callconv(.c) void {
         if (args) |arg| {
+            if (!@import("Util.zig").reset_button_debounce.accept()) return;
             const reset: *u32 = @ptrCast(@alignCast(arg));
             @atomicStore(u32, reset, 1, .monotonic);
         }
@@ -150,6 +151,7 @@ pub const ConfigHub = struct {
 
     fn ButtonPressed(args: ?*anyopaque) linksection(".iram1.confighub_button") callconv(.c) void {
         if (args) |arg| {
+            if (!@import("Util.zig").mode_button_debounce.accept()) return;
             const state: *State = @ptrCast(@alignCast(arg));
             @atomicStore(State, state, .WorkingUSB, .monotonic);
         }

@@ -25,14 +25,14 @@ private:
                    const std::uint8_t *data, int data_len) noexcept;
 
   static void IRAM_ATTR ButtonPressed(void *args) noexcept {
-    if (args != nullptr) {
+    if (args != nullptr && mode_button_debounce.accept()) {
       static_cast<AtomicState *>(args)->store(
           State::WorkingUSB, std::memory_order_relaxed);
     }
   }
 
   static void IRAM_ATTR ResetConfig(void *args) noexcept {
-    if (args != nullptr) {
+    if (args != nullptr && reset_button_debounce.accept()) {
       static_cast<std::atomic<std::uint32_t> *>(args)->store(
           1, std::memory_order_relaxed);
     }

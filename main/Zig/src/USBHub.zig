@@ -92,6 +92,7 @@ pub const USBHub = struct {
 
     fn ButtonPressed(args: ?*anyopaque) linksection(".iram1.usbhub_button") callconv(.c) void {
         if (args) |arg| {
+            if (!@import("Util.zig").mode_button_debounce.accept()) return;
             const state: *State = @ptrCast(@alignCast(arg));
             @atomicStore(State, state, .Configuring, .monotonic);
         }

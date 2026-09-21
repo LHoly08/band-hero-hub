@@ -1,5 +1,12 @@
 # band-hero-hub
 
+The mode (GPIO 20) and reset (GPIO 19) buttons each have a 200 ms debounce
+window: the first interrupt acts immediately, and further interrupts from that
+button are ignored during the window. Debounce state persists across mode changes.
+Adjust `BUTTON_DEBOUNCE_MS` in `include/utils.hpp` and `main/Zig/src/Util.zig`
+to change the delay in both implementations. Timing uses unsigned 32-bit FreeRTOS
+ticks with wraparound-safe subtraction; interrupt handlers do not sleep.
+
 Build with CMake 3.31 or newer, C++26, and Espressif's GCC 16.1.0
 `riscv32-esp-elf` toolchain. The SDK used for this setup is ESP-IDF
 `85c826ecb1` (6.2 development), which selects `esp-16.1.0_20260609`.

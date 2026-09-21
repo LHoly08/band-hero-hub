@@ -25,7 +25,7 @@ private:
                    const std::uint8_t *data, int data_len) noexcept;
 
   static void IRAM_ATTR ButtonPressed(void *args) noexcept {
-    if (args != nullptr) {
+    if (args != nullptr && mode_button_debounce.accept()) {
       static_cast<AtomicState *>(args)->store(
           State::Configuring, std::memory_order_relaxed);
     }
