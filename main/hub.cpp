@@ -61,7 +61,7 @@ void Hub::loop() noexcept {
 
   while (state.load(std::memory_order_relaxed) == State::WorkingUSB) {
 
-    if (std::uint32_t val{}; m_queue.pop(val)) {
+    if (std::uint32_t val{}; m_queue.pop(val)) [[likely]] {
 
       (void)std::fwrite(&val, 1, sizeof(val), stdout);
       (void)std::fflush(stdout);

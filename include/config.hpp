@@ -41,7 +41,7 @@ private:
   Queue<std::array<std::uint8_t, 6>, 3> m_queue{};
   MAC &m_peers;
   AtomicState &state;
-  // Oled m_oled{};
+  Oled m_oled{};
   std::atomic<std::uint32_t> m_reset{0};
 };
 

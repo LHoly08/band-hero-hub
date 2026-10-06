@@ -95,7 +95,7 @@ void Config::loop() noexcept {
         m_peers.push_back(macAddr);
       }
     }
-    /*
+  
     m_oled.clearBuffer();
 
     m_oled.drawBase();
@@ -104,7 +104,7 @@ void Config::loop() noexcept {
     }
 
     m_oled.sendBuffer();
-  */
+  
   }
 }
 
