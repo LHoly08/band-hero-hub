@@ -44,7 +44,7 @@ pub const ConfigHub = struct {
     }
 
     pub fn start(self: *Self) void {
-        //self.m_oled.Start();
+        self.m_oled.Start();
 
         zig_esp_error_check(c.gpio_install_isr_service(c.ESP_INTR_FLAG_IRAM));
         {
@@ -110,18 +110,18 @@ pub const ConfigHub = struct {
                 }
             }
 
-            //self.m_oled.clearBuffer();
+            self.m_oled.clearBuffer();
 
-            //self.m_oled.drawBase();
-            //for (0..self.m_macs.len) |i| {
-            //    const macAddr = self.m_macs.at(i);
+            self.m_oled.drawBase();
+            for (0..self.m_macs.len) |i| {
+                const macAddr = self.m_macs.at(i);
 
-            //    if (macAddr) |macAddress| {
-            //        self.m_oled.drawLine(macAddress.*, @intCast(i));
-            //    }
-            //}
+                if (macAddr) |macAddress| {
+                    self.m_oled.drawLine(macAddress.*, @intCast(i));
+                }
+            }
 
-            //self.m_oled.sendBuffer();
+            self.m_oled.sendBuffer();
         }
     }
 
