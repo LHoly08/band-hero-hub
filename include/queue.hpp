@@ -31,7 +31,7 @@ public:
   inline bool empty() const noexcept {
     return (uxQueueSpacesAvailable(m_queue) == S);
   };
-  template <Type type = Type::NORMAL> bool pop(T &outItem) noexcept;
+  template <Type type = Type::NORMAL> bool pop(T *outItem) noexcept;
   template <Type type = Type::NORMAL> bool push(T item) noexcept;
 
 private:
@@ -49,16 +49,18 @@ template <typename T, std::size_t S> Queue<T, S>::~Queue() noexcept {
 
 template <typename T, std::size_t S>
 template <Type type>
-bool Queue<T, S>::pop(T &outItem) noexcept {
+bool Queue<T, S>::pop(T *outItem) noexcept {
+  if (!outItem) {
+    return false;
+  }
 
   if constexpr (type == Type::NORMAL) {
-    return (xQueueReceive(m_queue, &outItem, pdMS_TO_TICKS(10)) == pdTRUE);
+    return (xQueueReceive(m_queue, outItem, pdMS_TO_TICKS(10)) == pdTRUE);
   } else {
     BaseType_t success = pdFALSE;
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    success =
-        xQueueReceiveFromISR(m_queue, &outItem, &xHigherPriorityTaskWoken);
+    success = xQueueReceiveFromISR(m_queue, outItem, &xHigherPriorityTaskWoken);
     if (xHigherPriorityTaskWoken == pdTRUE) {
       portYIELD_FROM_ISR();
     }

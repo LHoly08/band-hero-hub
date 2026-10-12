@@ -3,9 +3,9 @@
 #include "config.hpp"
 
 #include "esp_err.h"
+#include "esp_intr_alloc.h"
 #include "esp_now.h"
 #include "esp_wifi.h"
-#include "esp_intr_alloc.h"
 #include "nvs_flash.h"
 
 #include "driver/gpio.h"
@@ -81,8 +81,8 @@ void Config::loop() noexcept {
     }
     std::array<std::uint8_t, 6> macAddr{};
 
-    while (state.load(std::memory_order_relaxed) == State::Configuring &&
-           m_reset.load(std::memory_order_relaxed) == 0 && m_queue.pop(macAddr)) {
+    while (m_reset.load(std::memory_order_relaxed) == 0 &&
+           m_queue.pop(&macAddr)) {
 
       bool exists{false};
       for (const auto &mac : m_peers) {
@@ -95,7 +95,7 @@ void Config::loop() noexcept {
         m_peers.push_back(macAddr);
       }
     }
-  
+
     m_oled.clearBuffer();
 
     m_oled.drawBase();
@@ -104,7 +104,6 @@ void Config::loop() noexcept {
     }
 
     m_oled.sendBuffer();
-  
   }
 }
 
